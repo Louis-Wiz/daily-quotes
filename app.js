@@ -15,7 +15,6 @@ function App() {
     const [viewedHistory, setViewedHistory] = useState([]);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
-    const [isAdminMode] = useState(() => new URLSearchParams(window.location.search).get('admin') === '1');
     const [isAdminOpen, setIsAdminOpen] = useState(false);
     const [rememberAdminToken, setRememberAdminToken] = useState(() => localStorage.getItem('daily_quote_remember_admin_token') === '1');
     const [adminToken, setAdminToken] = useState(() => {
@@ -400,9 +399,7 @@ function App() {
                 <button onClick={handleRandom} aria-label="Random quote">Random</button>
                 <button onClick={handleNext} aria-label="Next quote">Next</button>
                 <button onClick={() => setIsHistoryOpen(true)} aria-label="View history">History</button>
-                {isAdminMode && (
-                    <button onClick={() => setIsAdminOpen(true)} aria-label="Open admin upload panel">Admin</button>
-                )}
+                <button onClick={() => setIsAdminOpen(true)} aria-label="Login">Login</button>
             </div>
 
             {isAdminOpen && (
