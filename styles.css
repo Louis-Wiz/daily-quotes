@@ -617,6 +617,24 @@ button:active {
     flex: 0 0 auto;
 }
 
+.admin-session {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 0.8rem 1rem;
+    color: rgba(255, 255, 255, 0.74);
+    font-size: 0.9rem;
+}
+
+.admin-session button {
+    padding: 0.35rem 0.75rem;
+    background: rgba(255, 255, 255, 0.08);
+}
+
 .admin-file-picker {
     border: 1px dashed rgba(255, 255, 255, 0.22);
     border-radius: 14px;
@@ -779,5 +797,10 @@ button:active {
 
     .admin-actions button {
         width: 100%;
+    }
+
+    .admin-session {
+        align-items: flex-start;
+        flex-direction: column;
     }
 }

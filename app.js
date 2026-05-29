@@ -23,6 +23,12 @@ function App() {
         }
         return sessionStorage.getItem('daily_quote_admin_token') || '';
     });
+    const [adminUsername, setAdminUsername] = useState(() => localStorage.getItem('daily_quote_admin_username') || 'admin');
+    const [adminPassword, setAdminPassword] = useState('');
+    const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => Boolean(
+        localStorage.getItem('daily_quote_admin_token') || sessionStorage.getItem('daily_quote_admin_token')
+    ));
+    const [loggingIn, setLoggingIn] = useState(false);
     const [selectedImageFile, setSelectedImageFile] = useState(null);
     const [uploadingImage, setUploadingImage] = useState(false);
     const [adminMessage, setAdminMessage] = useState('');
@@ -249,9 +255,8 @@ function App() {
         });
     };
 
-    const handleAdminTokenChange = (value) => {
-        setAdminToken(value);
-        if (rememberAdminToken) {
+    const saveAdminToken = (value, remember = rememberAdminToken) => {
+        if (remember) {
             if (value) {
                 localStorage.setItem('daily_quote_admin_token', value);
             } else {
@@ -284,11 +289,64 @@ function App() {
         }
     };
 
+    const handleAdminLogin = async (event) => {
+        event.preventDefault();
+
+        if (!adminUsername.trim() || !adminPassword) {
+            setAdminMessage('Enter your username and password.');
+            return;
+        }
+
+        setLoggingIn(true);
+        setAdminMessage('Logging in...');
+
+        try {
+            const response = await fetch('/.netlify/functions/login', {
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: adminUsername.trim(),
+                    password: adminPassword
+                })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Login failed.');
+            }
+
+            setAdminToken(result.token);
+            saveAdminToken(result.token);
+            localStorage.setItem('daily_quote_admin_username', result.username || adminUsername.trim());
+            setAdminUsername(result.username || adminUsername.trim());
+            setAdminPassword('');
+            setIsAdminLoggedIn(true);
+            setAdminMessage('Logged in. Choose an image to upload.');
+        } catch (err) {
+            setAdminMessage(err.message || 'Login failed.');
+        } finally {
+            setLoggingIn(false);
+        }
+    };
+
+    const handleAdminLogout = () => {
+        setAdminToken('');
+        setAdminPassword('');
+        setIsAdminLoggedIn(false);
+        setSelectedImageFile(null);
+        setAdminMessage('Logged out.');
+        localStorage.removeItem('daily_quote_admin_token');
+        sessionStorage.removeItem('daily_quote_admin_token');
+    };
+
     const handleImageUpload = async (event) => {
         event.preventDefault();
 
-        if (!adminToken.trim()) {
-            setAdminMessage('Enter your admin token first.');
+        if (!isAdminLoggedIn || !adminToken.trim()) {
+            setAdminMessage('Log in before uploading an image.');
             return;
         }
 
@@ -404,33 +462,57 @@ function App() {
 
             {isAdminOpen && (
                 <div className="admin-modal-overlay" onClick={() => setIsAdminOpen(false)}>
-                    <form className="admin-modal-content" onSubmit={handleImageUpload} onClick={e => e.stopPropagation()}>
+                    <form className="admin-modal-content" onSubmit={isAdminLoggedIn ? handleImageUpload : handleAdminLogin} onClick={e => e.stopPropagation()}>
                         <div className="admin-header">
-                            <h2>Quote Image</h2>
+                            <h2>{isAdminLoggedIn ? 'Quote Image' : 'Login'}</h2>
                             <button type="button" className="admin-close" onClick={() => setIsAdminOpen(false)}>&times;</button>
                         </div>
 
-                        <label className="admin-field">
-                            <span>Quote</span>
-                            <select value={currentIndex} onChange={e => changeQuote(Number(e.target.value))}>
-                                {quotes.map((quote, index) => (
-                                    <option key={index} value={index}>
-                                        {index + 1}. {quote.quote.substring(0, 70)}{quote.quote.length > 70 ? '...' : ''}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
+                        {!isAdminLoggedIn && (
+                            <>
+                                <label className="admin-field">
+                                    <span>Username</span>
+                                    <input
+                                        type="text"
+                                        value={adminUsername}
+                                        onChange={e => setAdminUsername(e.target.value)}
+                                        placeholder="admin"
+                                        autoComplete="username"
+                                    />
+                                </label>
 
-                        <label className="admin-field">
-                            <span>Admin token</span>
-                            <input
-                                type="password"
-                                value={adminToken}
-                                onChange={e => handleAdminTokenChange(e.target.value)}
-                                placeholder="Netlify DAILY_QUOTE_ADMIN_TOKEN"
-                                autoComplete="current-password"
-                            />
-                        </label>
+                                <label className="admin-field">
+                                    <span>Password</span>
+                                    <input
+                                        type="password"
+                                        value={adminPassword}
+                                        onChange={e => setAdminPassword(e.target.value)}
+                                        placeholder="Your admin password"
+                                        autoComplete="current-password"
+                                    />
+                                </label>
+                            </>
+                        )}
+
+                        {isAdminLoggedIn && (
+                            <>
+                                <div className="admin-session">
+                                    <span>Logged in as {adminUsername}</span>
+                                    <button type="button" onClick={handleAdminLogout}>Log out</button>
+                                </div>
+
+                                <label className="admin-field">
+                                    <span>Quote</span>
+                                    <select value={currentIndex} onChange={e => changeQuote(Number(e.target.value))}>
+                                        {quotes.map((quote, index) => (
+                                            <option key={index} value={index}>
+                                                {index + 1}. {quote.quote.substring(0, 70)}{quote.quote.length > 70 ? '...' : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                            </>
+                        )}
 
                         <label className="admin-remember">
                             <input
@@ -438,33 +520,39 @@ function App() {
                                 checked={rememberAdminToken}
                                 onChange={e => handleRememberAdminTokenChange(e.target.checked)}
                             />
-                            <span>Remember token on this device</span>
+                            <span>Remember on this device</span>
                         </label>
 
-                        <label className="admin-file-picker">
-                            <input
-                                type="file"
-                                accept="image/png,image/jpeg,image/webp,image/gif"
-                                onChange={e => {
-                                    setSelectedImageFile(e.target.files[0] || null);
-                                    setAdminMessage('');
-                                }}
-                            />
-                            <span>{selectedImageFile ? selectedImageFile.name : 'Choose image'}</span>
-                        </label>
+                        {isAdminLoggedIn && (
+                            <>
+                                <label className="admin-file-picker">
+                                    <input
+                                        type="file"
+                                        accept="image/png,image/jpeg,image/webp,image/gif"
+                                        onChange={e => {
+                                            setSelectedImageFile(e.target.files[0] || null);
+                                            setAdminMessage('');
+                                        }}
+                                    />
+                                    <span>{selectedImageFile ? selectedImageFile.name : 'Choose image'}</span>
+                                </label>
 
-                        {currentQuote.image && (
-                            <div className="admin-current-image">
-                                <img src={getImageSrc(currentQuote.image)} alt="Current quote visual" />
-                            </div>
+                                {currentQuote.image && (
+                                    <div className="admin-current-image">
+                                        <img src={getImageSrc(currentQuote.image)} alt="Current quote visual" />
+                                    </div>
+                                )}
+                            </>
                         )}
 
                         {adminMessage && <p className="admin-message">{adminMessage}</p>}
 
                         <div className="admin-actions">
                             <button type="button" onClick={() => setIsAdminOpen(false)}>Cancel</button>
-                            <button type="submit" disabled={uploadingImage}>
-                                {uploadingImage ? 'Saving...' : 'Save Image'}
+                            <button type="submit" disabled={uploadingImage || loggingIn}>
+                                {isAdminLoggedIn
+                                    ? (uploadingImage ? 'Saving...' : 'Save Image')
+                                    : (loggingIn ? 'Logging in...' : 'Login')}
                             </button>
                         </div>
                     </form>
