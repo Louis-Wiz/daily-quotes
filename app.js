@@ -15,8 +15,15 @@ function App() {
     const [viewedHistory, setViewedHistory] = useState([]);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
+    const [isAdminMode] = useState(() => new URLSearchParams(window.location.search).get('admin') === '1');
     const [isAdminOpen, setIsAdminOpen] = useState(false);
-    const [adminToken, setAdminToken] = useState(() => sessionStorage.getItem('daily_quote_admin_token') || '');
+    const [rememberAdminToken, setRememberAdminToken] = useState(() => localStorage.getItem('daily_quote_remember_admin_token') === '1');
+    const [adminToken, setAdminToken] = useState(() => {
+        if (localStorage.getItem('daily_quote_remember_admin_token') === '1') {
+            return localStorage.getItem('daily_quote_admin_token') || '';
+        }
+        return sessionStorage.getItem('daily_quote_admin_token') || '';
+    });
     const [selectedImageFile, setSelectedImageFile] = useState(null);
     const [uploadingImage, setUploadingImage] = useState(false);
     const [adminMessage, setAdminMessage] = useState('');
@@ -245,10 +252,36 @@ function App() {
 
     const handleAdminTokenChange = (value) => {
         setAdminToken(value);
-        if (value) {
-            sessionStorage.setItem('daily_quote_admin_token', value);
+        if (rememberAdminToken) {
+            if (value) {
+                localStorage.setItem('daily_quote_admin_token', value);
+            } else {
+                localStorage.removeItem('daily_quote_admin_token');
+            }
         } else {
-            sessionStorage.removeItem('daily_quote_admin_token');
+            if (value) {
+                sessionStorage.setItem('daily_quote_admin_token', value);
+            } else {
+                sessionStorage.removeItem('daily_quote_admin_token');
+            }
+        }
+    };
+
+    const handleRememberAdminTokenChange = (checked) => {
+        setRememberAdminToken(checked);
+
+        if (checked) {
+            localStorage.setItem('daily_quote_remember_admin_token', '1');
+            if (adminToken) {
+                localStorage.setItem('daily_quote_admin_token', adminToken);
+                sessionStorage.removeItem('daily_quote_admin_token');
+            }
+        } else {
+            localStorage.removeItem('daily_quote_remember_admin_token');
+            localStorage.removeItem('daily_quote_admin_token');
+            if (adminToken) {
+                sessionStorage.setItem('daily_quote_admin_token', adminToken);
+            }
         }
     };
 
@@ -367,7 +400,9 @@ function App() {
                 <button onClick={handleRandom} aria-label="Random quote">Random</button>
                 <button onClick={handleNext} aria-label="Next quote">Next</button>
                 <button onClick={() => setIsHistoryOpen(true)} aria-label="View history">History</button>
-                <button onClick={() => setIsAdminOpen(true)} aria-label="Open admin upload panel">Admin</button>
+                {isAdminMode && (
+                    <button onClick={() => setIsAdminOpen(true)} aria-label="Open admin upload panel">Admin</button>
+                )}
             </div>
 
             {isAdminOpen && (
@@ -398,6 +433,15 @@ function App() {
                                 placeholder="Netlify DAILY_QUOTE_ADMIN_TOKEN"
                                 autoComplete="current-password"
                             />
+                        </label>
+
+                        <label className="admin-remember">
+                            <input
+                                type="checkbox"
+                                checked={rememberAdminToken}
+                                onChange={e => handleRememberAdminTokenChange(e.target.checked)}
+                            />
+                            <span>Remember token on this device</span>
                         </label>
 
                         <label className="admin-file-picker">

@@ -600,6 +600,23 @@ button:active {
     background: rgba(255, 255, 255, 0.12);
 }
 
+.admin-remember {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.92rem;
+    line-height: 1.4;
+}
+
+.admin-remember input {
+    width: 18px;
+    height: 18px;
+    accent-color: #ffffff;
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+
 .admin-file-picker {
     border: 1px dashed rgba(255, 255, 255, 0.22);
     border-radius: 14px;
