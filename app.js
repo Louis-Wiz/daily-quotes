@@ -399,7 +399,7 @@ function App() {
                 <button onClick={handleRandom} aria-label="Random quote">Random</button>
                 <button onClick={handleNext} aria-label="Next quote">Next</button>
                 <button onClick={() => setIsHistoryOpen(true)} aria-label="View history">History</button>
-                <button onClick={() => setIsAdminOpen(true)} aria-label="Login">Login</button>
+                <button onClick={() => setIsAdminOpen(true)} aria-label="Upload images">Upload images</button>
             </div>
 
             {isAdminOpen && (
