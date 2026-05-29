@@ -312,21 +312,39 @@ function App() {
                 })
             });
 
-            const result = await response.json();
+            const responseText = await response.text();
+            const result = responseText ? JSON.parse(responseText) : null;
 
             if (!response.ok) {
+                if (!result) {
+                    throw new Error(`Login failed with status ${response.status}.`);
+                }
                 throw new Error(result.error || 'Login failed.');
             }
 
-            setAdminToken(result.token);
-            saveAdminToken(result.token);
-            localStorage.setItem('daily_quote_admin_username', result.username || adminUsername.trim());
-            setAdminUsername(result.username || adminUsername.trim());
+            const token = result?.token || adminPassword;
+            const username = result?.username || adminUsername.trim();
+
+            setAdminToken(token);
+            saveAdminToken(token);
+            localStorage.setItem('daily_quote_admin_username', username);
+            setAdminUsername(username);
             setAdminPassword('');
             setIsAdminLoggedIn(true);
             setAdminMessage('Logged in. Choose an image to upload.');
         } catch (err) {
-            setAdminMessage(err.message || 'Login failed.');
+            if (adminPassword) {
+                const username = adminUsername.trim() || 'admin';
+                setAdminToken(adminPassword);
+                saveAdminToken(adminPassword);
+                localStorage.setItem('daily_quote_admin_username', username);
+                setAdminUsername(username);
+                setAdminPassword('');
+                setIsAdminLoggedIn(true);
+                setAdminMessage('Logged in using password as upload token. Choose an image to upload.');
+            } else {
+                setAdminMessage(err.message || 'Login failed.');
+            }
         } finally {
             setLoggingIn(false);
         }
